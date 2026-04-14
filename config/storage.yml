@@ -1,6 +1,6 @@
 test:
   service: S3
-  endpoint: <%= GlobalConfig.get("AWS_S3_ENDPOINT") %>
+  endpoint: <%= GlobalConfig.get("AWS_S3_ENDPOINT").presence || "https://minio.gumroad.dev" %>
   access_key_id: <%= GlobalConfig.get("AWS_ACCESS_KEY_ID") %>
   secret_access_key: <%= GlobalConfig.get("AWS_SECRET_ACCESS_KEY") %>
   region: us-east-1
@@ -15,7 +15,7 @@ local:
 # MinIO for development
 development:
   service: S3
-  endpoint: <%= GlobalConfig.get("AWS_S3_ENDPOINT") %>
+  endpoint: <%= GlobalConfig.get("AWS_S3_ENDPOINT").presence || "https://minio.gumroad.dev" %>
   access_key_id: <%= GlobalConfig.get("AWS_ACCESS_KEY_ID") %>
   secret_access_key: <%= GlobalConfig.get("AWS_SECRET_ACCESS_KEY") %>
   region: us-east-1

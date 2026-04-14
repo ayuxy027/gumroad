@@ -10,6 +10,7 @@ class LinksController < ApplicationController
   DEFAULT_PRICE = 500
 
   prepend_before_action :disable_third_party_analytics!, only: :cart_items_count
+  before_action :authenticate_mobile_api_user!, only: %i[new edit]
 
 
 
@@ -505,6 +506,13 @@ class LinksController < ApplicationController
   end
 
   private
+    def authenticate_mobile_api_user!
+      return if !params[:access_token].present? || params[:mobile_token] != Api::Mobile::BaseController::MOBILE_TOKEN
+
+      doorkeeper_authorize! :mobile_api
+      sign_in current_api_user if current_api_user.present?
+    end
+
     def fetch_product_for_show
       fetch_product_by_custom_domain || fetch_product_by_general_permalink
     end
