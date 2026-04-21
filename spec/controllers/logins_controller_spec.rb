@@ -115,6 +115,13 @@ describe LoginsController, type: :controller, inertia: true do
       expect(response).to redirect_to(dashboard_path)
     end
 
+    it "logs in when the login identifier contains UTF-16 null bytes from iOS WebKit autofill" do
+      utf16_email = @user.email.chars.join("\u0000") + "\u0000"
+      post "create", params: { user: { login_identifier: utf16_email, password: "password" } }
+      expect(response).to redirect_to(dashboard_path)
+      expect(controller.user_signed_in?).to be(true)
+    end
+
     it "shows proper error if password is incorrect" do
       post "create", params: { user: { login_identifier: @user.email, password: "hunter2" } }
       expect(response).to redirect_to(login_path)

@@ -34,7 +34,7 @@ class LoginsController < Devise::SessionsController
     end
 
     if params["user"].instance_of?(ActionController::Parameters)
-      login_identifier = params["user"]["login_identifier"]
+      login_identifier = params["user"]["login_identifier"]&.gsub("\u0000", "")&.strip
       password = params["user"]["password"]
       @user = User.where(email: login_identifier).first || User.where(username: login_identifier).first if login_identifier.present?
     end
