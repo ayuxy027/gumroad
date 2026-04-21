@@ -34,6 +34,16 @@ describe Api::V2::LinksController do
         }.as_json(api_scopes: ["view_public"], slim: true))
       end
 
+      it "includes unique_permalink in the response" do
+        product = create(:product, user: @user, unique_permalink: "testslug", created_at: Time.current + 1800)
+
+        get @action, params: @params
+
+        item = response.parsed_body["products"].find { |p| p["id"] == product.external_id }
+        expect(item).to be_present
+        expect(item["unique_permalink"]).to eq("testslug")
+      end
+
       it "omits detail-only fields from the slim response" do
         versioned_product = create(:product_with_digital_versions, user: @user, created_at: Time.current + 7200)
         create(:product_file, link: versioned_product, url: "#{S3_BASE_URL}specs/test.pdf")

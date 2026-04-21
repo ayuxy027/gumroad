@@ -83,6 +83,7 @@ module Product::AsJson
 
       json = as_json(original: true, only: keep).merge!(
         "id" => external_id,
+        "unique_permalink" => unique_permalink,
         "url" => nil, # Deprecated
         "price" => cached_default_price_cents,
         "currency" => price_currency_type,
