@@ -83,6 +83,7 @@ type Props = {
   seller_refund_policy: Pick<RefundPolicy, "title" | "fine_print">;
   cancellation_discounts_enabled: boolean;
   ai_generated: boolean;
+  is_mobile_app_web_view: boolean;
 };
 
 const buildFilesById = (productId: string, files: Props["product"]["files"]) =>
@@ -122,6 +123,7 @@ const createContextValue = (props: Props) => ({
   contentUpdates: null,
   setContentUpdates: () => {},
   aiGenerated: props.ai_generated,
+  isMobileAppWebView: props.is_mobile_app_web_view,
 });
 
 const pagesHaveSameContent = (pages1: Page[], pages2: Page[]): boolean => isEqual(pages1, pages2);
@@ -164,15 +166,24 @@ const ProductEditPage = (props: Props) => {
     try {
       setSaving(true);
       const response = await saveProduct(props.unique_permalink, props.id, product, currencyType);
-      if (response.warning_message) showAlert(response.warning_message, "warning");
-      else {
+      if (response.warning_message) {
+        if (props.is_mobile_app_web_view) {
+          window.ReactNativeWebView?.postMessage(
+            JSON.stringify({ type: "productSaveWarning", payload: { message: response.warning_message } }),
+          );
+        } else {
+          showAlert(response.warning_message, "warning");
+        }
+      } else {
         const { contentUpdatedVariantIds, sharedContentUpdated } = findUpdatedContent(
           product,
           lastSavedProductRef.current,
         );
         const contentUpdated = sharedContentUpdated || contentUpdatedVariantIds.length > 0;
 
-        if (props.successful_sales_count > 0 && contentUpdated) {
+        if (props.is_mobile_app_web_view) {
+          window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "productSaveSuccess", payload: {} }));
+        } else if (props.successful_sales_count > 0 && contentUpdated) {
           const uniquePermalinkOrVariantIds = product.has_same_rich_content_for_all_variants
             ? [props.unique_permalink]
             : contentUpdatedVariantIds;
@@ -187,7 +198,13 @@ const ProductEditPage = (props: Props) => {
       }
     } catch (e) {
       assertResponseError(e);
-      showAlert(e.message, "error");
+      if (props.is_mobile_app_web_view) {
+        window.ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "productSaveError", payload: { message: e.message } }),
+        );
+      } else {
+        showAlert(e.message, "error");
+      }
     }
     setSaving(false);
   };
@@ -207,6 +224,7 @@ const ProductEditPage = (props: Props) => {
       contentUpdates,
       setContentUpdates,
       filesById,
+      isMobileAppWebView: props.is_mobile_app_web_view,
     }),
     [product, updateProduct, existingFiles, setExistingFiles, filesById],
   );

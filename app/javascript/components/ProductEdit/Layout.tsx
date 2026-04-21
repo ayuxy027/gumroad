@@ -21,6 +21,7 @@ import { SubtitleFile } from "$app/components/SubtitleList/Row";
 import { Alert } from "$app/components/ui/Alert";
 import { PageHeader } from "$app/components/ui/PageHeader";
 import { Tab, Tabs } from "$app/components/ui/Tabs";
+import { useReactNativeMessage } from "$app/components/useReactNativeMessage";
 import { useRefToLatest } from "$app/components/useRefToLatest";
 import { WithTooltip } from "$app/components/WithTooltip";
 
@@ -138,7 +139,8 @@ export const Layout = ({
   showBorder?: boolean;
   showNavigationButton?: boolean;
 }) => {
-  const { id, product, updateProduct, uniquePermalink, saving, save, currencyType } = useProductEditContext();
+  const { id, product, updateProduct, uniquePermalink, saving, save, currencyType, isMobileAppWebView } =
+    useProductEditContext();
   const currentSeller = useCurrentSeller();
   const rootPath = Routes.edit_link_path(uniquePermalink);
 
@@ -172,19 +174,47 @@ export const Layout = ({
       await saveProduct(uniquePermalink, id, product, currencyType);
       await setProductPublished(uniquePermalink, published);
       updateProduct({ is_published: published });
-      showAlert(published ? "Published!" : "Unpublished!", "success");
-      if (tab === "share") {
-        if (product.native_type === "coffee") navigate.current(rootPath);
-        else navigate.current(`${rootPath}/content`);
-      } else if (published) {
-        navigate.current(`${rootPath}/share`);
+      if (isMobileAppWebView) {
+        window.ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: published ? "productPublishSuccess" : "productUnpublishSuccess", payload: {} }),
+        );
+      } else {
+        showAlert(published ? "Published!" : "Unpublished!", "success");
+        if (tab === "share") {
+          if (product.native_type === "coffee") navigate.current(rootPath);
+          else navigate.current(`${rootPath}/content`);
+        } else if (published) {
+          navigate.current(`${rootPath}/share`);
+        }
       }
     } catch (e) {
       assertResponseError(e);
-      showAlert(e.message, "error", { html: true });
+      if (isMobileAppWebView) {
+        window.ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "productSaveError", payload: { message: e.message } }),
+        );
+      } else {
+        showAlert(e.message, "error", { html: true });
+      }
     }
     setIsPublishing(false);
   };
+
+  React.useEffect(() => {
+    if (!isMobileAppWebView) return;
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "productTabChange", payload: { tab } }));
+  }, [tab, isMobileAppWebView]);
+
+  useReactNativeMessage((message) => {
+    if (!isMobileAppWebView) return;
+    if (message.type === "mobileAppProductSave") {
+      void save();
+    } else if (message.type === "mobileAppProductPublish") {
+      void setPublished(true);
+    } else if (message.type === "mobileAppProductUnpublish") {
+      void setPublished(false);
+    }
+  });
 
   const isUploadingFile = (file: FileEntry | SubtitleFile) =>
     file.status.type === "unsaved" && file.status.uploadStatus.type === "uploading";
@@ -211,6 +241,19 @@ export const Layout = ({
 
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [isUploadingFilesOrImages]);
+
+  if (isMobileAppWebView) {
+    return preview ? (
+      <WithPreviewSidebar className="flex-1">
+        {children}
+        <PreviewSidebar>
+          <Preview scaleFactor={previewScaleFactor}>{preview}</Preview>
+        </PreviewSidebar>
+      </WithPreviewSidebar>
+    ) : (
+      <div className="flex-1">{children}</div>
+    );
+  }
 
   const saveButton = (
     <WithTooltip tip={saveButtonTooltip}>

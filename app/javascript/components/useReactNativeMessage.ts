@@ -10,7 +10,10 @@ export type ReactNativeMessage =
   | {
       type: "mobileAppAudioPlayerInfo";
       payload: { fileId: string; isPlaying: boolean; latestMediaLocation?: string };
-    };
+    }
+  | { type: "mobileAppProductSave"; payload: Record<string, never> }
+  | { type: "mobileAppProductPublish"; payload: Record<string, never> }
+  | { type: "mobileAppProductUnpublish"; payload: Record<string, never> };
 
 export const useReactNativeMessage = (handler: (data: ReactNativeMessage) => void) => {
   const handlerRef = useRefToLatest(handler);
