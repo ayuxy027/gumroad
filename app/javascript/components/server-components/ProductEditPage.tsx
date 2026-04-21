@@ -77,7 +77,10 @@ type Props = {
   aws_key: string;
   s3_url: string;
   available_countries: ShippingCountry[];
-  google_client_id: string;
+  // Nullable: GOOGLE_CLIENT_ID is optional in development and self-hosted setups
+  // where Google Calendar OAuth isn't configured. The Inertia page hydrates this
+  // via cast<PageProps>, so the type must accept null or rendering throws.
+  google_client_id: string | null;
   google_calendar_enabled: boolean;
   seller_refund_policy_enabled: boolean;
   seller_refund_policy: Pick<RefundPolicy, "title" | "fine_print">;

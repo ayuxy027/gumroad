@@ -58,6 +58,13 @@ export const GoogleCalendarIntegrationEditor = ({
   }, [integration]);
 
   const handleConnectGoogleAccount = () => {
+    // googleClientId is null when GOOGLE_CLIENT_ID isn't set in the environment
+    // (typical for local dev and self-hosted instances). Bail out with a clear
+    // message instead of opening a broken OAuth popup.
+    if (!googleClientId) {
+      showAlert("Google Calendar integration is not configured on this server.", "error");
+      return;
+    }
     setIsLoading(true);
     const oauthPopup = window.open(getOAuthUrl(googleClientId), "google_calendar", "popup=yes");
     startOauthRedirectChecker({

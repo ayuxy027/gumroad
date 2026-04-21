@@ -196,7 +196,9 @@ export const ProductEditContext = React.createContext<{
   availableCountries: ShippingCountry[];
   saving: boolean;
   save: () => Promise<void>;
-  googleClientId: string;
+  // Null when GOOGLE_CLIENT_ID env var is not configured (dev / self-hosted).
+  // Consumers must gate any Google OAuth UI on the presence of this value.
+  googleClientId: string | null;
   googleCalendarEnabled: boolean;
   seller_refund_policy_enabled: boolean;
   seller_refund_policy: Pick<RefundPolicy, "title" | "fine_print">;
