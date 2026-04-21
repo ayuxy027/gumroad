@@ -371,6 +371,21 @@ describe LinksController, :vcr, inertia: true do
               }
             end.to raise_error(ActiveRecord::RecordNotFound)
           end
+
+          it "persists the mobile-authenticated session for a subsequent product update" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+            expect(response).to be_successful
+
+            put :update, params: { id: product.unique_permalink, name: "Renamed via mobile" }, as: :json
+
+            expect(response).to have_http_status(:no_content)
+            expect(product.reload.name).to eq("Renamed via mobile")
+          end
         end
 
         context "with invalid access_token" do
