@@ -83,6 +83,10 @@ module Product::AsJson
 
       json = as_json(original: true, only: keep).merge!(
         "id" => external_id,
+        # The mobile app uses unique_permalink to construct the WebView edit URL
+        # (/products/:permalink/edit). The public v2 API previously omitted it,
+        # forcing clients to derive it elsewhere — exposing it here keeps the
+        # mobile product list -> edit navigation working with a single API call.
         "unique_permalink" => unique_permalink,
         "url" => nil, # Deprecated
         "price" => cached_default_price_cents,

@@ -169,6 +169,10 @@ const ProductEditPage = (props: Props) => {
     try {
       setSaving(true);
       const response = await saveProduct(props.unique_permalink, props.id, product, currencyType);
+      // Mobile WebView path: every save outcome (warning / success / error) is reported
+      // back to the native shell via postMessage instead of in-page Alerts. The native
+      // header listens for these to toggle button state and show toasts. Keep the desktop
+      // Alert / contentUpdates flows intact in the else branches.
       if (response.warning_message) {
         if (props.is_mobile_app_web_view) {
           window.ReactNativeWebView?.postMessage(

@@ -11,6 +11,9 @@ export type ReactNativeMessage =
       type: "mobileAppAudioPlayerInfo";
       payload: { fileId: string; isPlaying: boolean; latestMediaLocation?: string };
     }
+  // Inbound bridge messages from the native product editor header buttons.
+  // The web app responds by emitting productSaveSuccess / productPublishSuccess /
+  // productUnpublishSuccess / productSaveError / productSaveWarning back to RN.
   | { type: "mobileAppProductSave"; payload: Record<string, never> }
   | { type: "mobileAppProductPublish"; payload: Record<string, never> }
   | { type: "mobileAppProductUnpublish"; payload: Record<string, never> };

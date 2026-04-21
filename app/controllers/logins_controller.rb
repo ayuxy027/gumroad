@@ -34,6 +34,9 @@ class LoginsController < Devise::SessionsController
     end
 
     if params["user"].instance_of?(ActionController::Parameters)
+      # Strip UTF-16 NULs and surrounding whitespace before lookup. Some mobile keyboards
+      # (and copy/paste flows) inject \u0000 which silently breaks exact-match queries
+      # against indexed columns and causes "account does not exist" for valid users.
       login_identifier = params["user"]["login_identifier"]&.gsub("\u0000", "")&.strip
       password = params["user"]["password"]
       @user = User.where(email: login_identifier).first || User.where(username: login_identifier).first if login_identifier.present?
@@ -54,6 +57,10 @@ class LoginsController < Devise::SessionsController
     end
 
     path = login_path_for(@user)
+    # When login is submitted via Inertia XHR and the post-login destination is the
+    # OAuth authorize endpoint (mobile app sign-in flow), a normal redirect_to returns
+    # a 302 that Inertia tries to follow as XHR — and OAuth's HTML response breaks it.
+    # inertia_location forces a full browser navigation so the OAuth page renders.
     if request.inertia? && path.start_with?("/oauth/authorize")
       inertia_location(path)
     else

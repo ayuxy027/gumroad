@@ -295,6 +295,9 @@ class LinksController < ApplicationController
 
     ai_generated = params[:ai_generated] == "true"
     presenter = ProductPresenter.new(product: @product, pundit_user:, ai_generated:)
+    # The mobile app loads this page in a WebView and passes display=mobile_app so the
+    # frontend can hide the desktop chrome and route Save/Publish/Unpublish through the
+    # native bridge (window.ReactNativeWebView.postMessage) instead of in-page UI.
     render inertia: "Products/Edit", props: presenter.edit_props.merge(
       is_mobile_app_web_view: params[:display] == "mobile_app"
     )
@@ -508,6 +511,16 @@ class LinksController < ApplicationController
   end
 
   private
+    # Establishes a Devise session for the mobile app's product edit WebView.
+    #
+    # The mobile app holds an OAuth access_token but the desktop edit UI is cookie-based,
+    # so we exchange the token for a session on first hit. Two credentials are required
+    # together to prevent CSRF / token-leak attacks against this entry point:
+    #   - access_token: the user's Doorkeeper token (must have :account scope)
+    #   - mobile_token: a shared secret known only to the mobile app build
+    # Both must be present and the mobile_token must match exactly. We use secure_compare
+    # to avoid timing-attack signal on the shared secret. If anything is wrong we redirect
+    # to login WITHOUT echoing the access_token (handled implicitly by redirect_to login_path).
     def sign_in_from_mobile_app_token
       return if user_signed_in?
       return unless params[:access_token].present? || params[:mobile_token].present?

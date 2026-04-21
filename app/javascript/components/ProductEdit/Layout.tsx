@@ -175,6 +175,8 @@ export const Layout = ({
       await setProductPublished(uniquePermalink, published);
       updateProduct({ is_published: published });
       if (isMobileAppWebView) {
+        // Notify the native header so it can flip the button label and toast.
+        // No in-app navigation here — the WebView stays on the same edit URL.
         window.ReactNativeWebView?.postMessage(
           JSON.stringify({ type: published ? "productPublishSuccess" : "productUnpublishSuccess", payload: {} }),
         );
@@ -202,11 +204,17 @@ export const Layout = ({
 
   React.useEffect(() => {
     if (!isMobileAppWebView) return;
+    // Mirror the in-page tab to the native shell so it can update its own UI
+    // (e.g. highlighting the active tab in the native header).
     window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "productTabChange", payload: { tab } }));
   }, [tab, isMobileAppWebView]);
 
   useReactNativeMessage((message) => {
     if (!isMobileAppWebView) return;
+    // Hard guard: never start a save/publish while uploads or another save are in
+    // flight. Doing so risks committing partial state (a half-uploaded file would
+    // be saved as "uploading" and orphan its blob). We respond with productSaveError
+    // so the native UI can surface a non-blocking message and re-enable the button.
     if (isBusy) {
       const reason = isUploadingFiles
         ? "Some files are still uploading, please wait..."
@@ -254,6 +262,8 @@ export const Layout = ({
   }, [isUploadingFilesOrImages]);
 
   if (isMobileAppWebView) {
+    // Render only the editor body — no PageHeader, tabs, or save/publish buttons.
+    // The native shell provides those controls and triggers them via postMessage.
     return preview ? (
       <WithPreviewSidebar className="flex-1">
         {children}
