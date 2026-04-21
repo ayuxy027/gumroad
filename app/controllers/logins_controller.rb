@@ -53,7 +53,12 @@ class LoginsController < Devise::SessionsController
       flash[:warning] = "Your password has previously appeared in a data breach as per haveibeenpwned.com and should never be used. We strongly recommend you change your password everywhere you have used it."
     end
 
-    redirect_to login_path_for(@user), allow_other_host: true
+    path = login_path_for(@user)
+    if request.inertia? && path.start_with?("/oauth/authorize")
+      inertia_location(path)
+    else
+      redirect_to path, allow_other_host: true
+    end
   end
 
   private

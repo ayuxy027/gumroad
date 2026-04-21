@@ -299,6 +299,25 @@ describe LoginsController, type: :controller, inertia: true do
 
         expect(response).to redirect_to(CGI.unescape(@next_url))
       end
+
+      context "with an Inertia request" do
+        before do
+          request.headers["X-Inertia"] = "true"
+        end
+
+        it "returns an inertia_location response so the browser navigates to the OAuth authorization path" do
+          post "create", params: { user: { login_identifier: @user.email, password: "password" }, next: @next_url }
+
+          expect(response).to have_http_status(:conflict)
+          expect(response.headers["X-Inertia-Location"]).to eq(CGI.unescape(@next_url))
+        end
+
+        it "does not return an inertia_location response for a non-OAuth next path" do
+          post "create", params: { user: { login_identifier: @user.email, password: "password" }, next: "/about" }
+
+          expect(response).to redirect_to("/about")
+        end
+      end
     end
 
     describe "two factor authentication" do
