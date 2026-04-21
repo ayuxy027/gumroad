@@ -333,7 +333,19 @@ describe LinksController, :vcr, inertia: true do
               mobile_token: "wrong_token",
             }
 
-            expect(response).to redirect_to(a_string_starting_with(login_path))
+            expect(response).to redirect_to(login_path)
+          end
+
+          it "does not leak the access_token into the login redirect when auth fails" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: "wrong_token",
+            }
+
+            expect(response).to redirect_to(login_path)
+            expect(response.location).not_to include(access_token.token)
           end
 
           it "does not sign in when access_token is absent even with a valid mobile_token" do
@@ -343,22 +355,21 @@ describe LinksController, :vcr, inertia: true do
               mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
             }
 
-            expect(response).to redirect_to(a_string_starting_with(login_path))
+            expect(response).to redirect_to(login_path)
           end
 
-          it "redirects when the token owner is not the product owner" do
+          it "redirects to the product's public page when the token owner is not the product owner" do
             other_user = create(:user)
             other_token = create("doorkeeper/access_token", application: oauth_app, resource_owner_id: other_user.id, scopes: "account")
 
-            get :edit, params: {
-              id: product.unique_permalink,
-              display: "mobile_app",
-              access_token: other_token.token,
-              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
-            }
-
-            expect(response).to be_redirect
-            expect(response).not_to have_http_status(:ok)
+            expect do
+              get :edit, params: {
+                id: product.unique_permalink,
+                display: "mobile_app",
+                access_token: other_token.token,
+                mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+              }
+            end.to raise_error(ActiveRecord::RecordNotFound)
           end
         end
 

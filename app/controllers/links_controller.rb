@@ -510,11 +510,16 @@ class LinksController < ApplicationController
   private
     def sign_in_from_mobile_app_token
       return if user_signed_in?
-      return unless params[:access_token].present? && params[:mobile_token].present?
-      return unless ActiveSupport::SecurityUtils.secure_compare(params[:mobile_token].to_s, Api::Mobile::BaseController::MOBILE_TOKEN)
+      return unless params[:access_token].present? || params[:mobile_token].present?
 
-      doorkeeper_authorize! :account
-      sign_in current_api_user if current_api_user.present?
+      if params[:access_token].present? && params[:mobile_token].present? &&
+         ActiveSupport::SecurityUtils.secure_compare(params[:mobile_token].to_s, Api::Mobile::BaseController::MOBILE_TOKEN)
+        doorkeeper_authorize! :account
+        sign_in current_api_user if current_api_user.present?
+        return
+      end
+
+      redirect_to login_path
     end
 
     def fetch_product_for_show
