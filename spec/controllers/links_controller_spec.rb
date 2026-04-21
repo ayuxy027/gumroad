@@ -284,6 +284,87 @@ describe LinksController, :vcr, inertia: true do
           expect(inertia).to render_component("Products/Edit")
         end
       end
+
+      describe "is_mobile_app_web_view prop" do
+        it "is false when display param is absent" do
+          get :edit, params: { id: product.unique_permalink }
+          expect(inertia.props[:is_mobile_app_web_view]).to eq(false)
+        end
+
+        it "is true when display=mobile_app is provided" do
+          get :edit, params: { id: product.unique_permalink, display: "mobile_app" }
+          expect(inertia.props[:is_mobile_app_web_view]).to eq(true)
+        end
+
+        it "is false for any other display value" do
+          get :edit, params: { id: product.unique_permalink, display: "other" }
+          expect(inertia.props[:is_mobile_app_web_view]).to eq(false)
+        end
+      end
+
+      describe "authenticating via mobile app access_token" do
+        let(:oauth_app) { create(:oauth_application, owner: seller) }
+
+        before do
+          sign_out(controller.current_user) if controller.current_user
+        end
+
+        context "with valid account access_token and mobile_token" do
+          let(:access_token) { create("doorkeeper/access_token", application: oauth_app, resource_owner_id: seller.id, scopes: "account") }
+
+          it "signs the user in and renders the edit page" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+
+            expect(response).to be_successful
+            expect(inertia).to render_component("Products/Edit")
+            expect(inertia.props[:is_mobile_app_web_view]).to eq(true)
+          end
+
+          it "requires mobile_token to match the expected value" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: "wrong_token",
+            }
+
+            expect(response).to redirect_to(login_url(next: request.fullpath))
+          end
+        end
+
+        context "with invalid access_token" do
+          it "returns 401" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: "invalid_token",
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+
+            expect(response).to have_http_status(:unauthorized)
+          end
+        end
+
+        context "with access_token scoped to something other than account" do
+          let(:access_token) { create("doorkeeper/access_token", application: oauth_app, resource_owner_id: seller.id, scopes: "creator_api") }
+
+          it "returns 403" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+
+            expect(response).to have_http_status(:forbidden)
+          end
+        end
+      end
     end
 
     describe "PUT update" do

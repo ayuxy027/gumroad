@@ -14,6 +14,7 @@ class LinksController < ApplicationController
 
 
   PUBLIC_ACTIONS = %i[show search increment_views track_user_action cart_items_count].freeze
+  before_action :sign_in_from_mobile_app_token, only: :edit
   before_action :authenticate_user!, except: PUBLIC_ACTIONS
   after_action :verify_authorized, except: PUBLIC_ACTIONS
 
@@ -294,7 +295,9 @@ class LinksController < ApplicationController
 
     ai_generated = params[:ai_generated] == "true"
     presenter = ProductPresenter.new(product: @product, pundit_user:, ai_generated:)
-    render inertia: "Products/Edit", props: presenter.edit_props
+    render inertia: "Products/Edit", props: presenter.edit_props.merge(
+      is_mobile_app_web_view: params[:display] == "mobile_app"
+    )
   end
 
   def update
@@ -505,6 +508,15 @@ class LinksController < ApplicationController
   end
 
   private
+    def sign_in_from_mobile_app_token
+      return if user_signed_in?
+      return unless params[:access_token].present? && params[:mobile_token].present?
+      return unless ActiveSupport::SecurityUtils.secure_compare(params[:mobile_token].to_s, Api::Mobile::BaseController::MOBILE_TOKEN)
+
+      doorkeeper_authorize! :account
+      sign_in current_api_user if current_api_user.present?
+    end
+
     def fetch_product_for_show
       fetch_product_by_custom_domain || fetch_product_by_general_permalink
     end
