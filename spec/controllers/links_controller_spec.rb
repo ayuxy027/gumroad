@@ -400,6 +400,36 @@ describe LinksController, :vcr, inertia: true do
             expect(response).to have_http_status(:forbidden)
           end
         end
+
+        context "with a revoked access_token" do
+          let(:access_token) { create("doorkeeper/access_token", application: oauth_app, resource_owner_id: seller.id, scopes: "account", revoked_at: Time.current) }
+
+          it "returns 401" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+
+            expect(response).to have_http_status(:unauthorized)
+          end
+        end
+
+        context "with an expired access_token" do
+          let(:access_token) { create("doorkeeper/access_token", application: oauth_app, resource_owner_id: seller.id, scopes: "account", expires_in: -10.minutes) }
+
+          it "returns 401" do
+            get :edit, params: {
+              id: product.unique_permalink,
+              display: "mobile_app",
+              access_token: access_token.token,
+              mobile_token: Api::Mobile::BaseController::MOBILE_TOKEN,
+            }
+
+            expect(response).to have_http_status(:unauthorized)
+          end
+        end
       end
     end
 
