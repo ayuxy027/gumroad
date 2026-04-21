@@ -207,6 +207,17 @@ export const Layout = ({
 
   useReactNativeMessage((message) => {
     if (!isMobileAppWebView) return;
+    if (isBusy) {
+      const reason = isUploadingFiles
+        ? "Some files are still uploading, please wait..."
+        : isUploadingFilesOrImages
+          ? "Some images are still uploading, please wait..."
+          : "Please wait...";
+      window.ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: "productSaveError", payload: { message: reason } }),
+      );
+      return;
+    }
     if (message.type === "mobileAppProductSave") {
       void save();
     } else if (message.type === "mobileAppProductPublish") {
